@@ -1,17 +1,6 @@
 from typing import List
 
-import psycopg2
-
-from settlemant_class import SalaryData, AttData, MemberSalary
-from db_cred import (
-    HOST,
-    DB_NAME,
-    DB_USER,
-    DB_PASSWORD,
-    DJANGO_DB_NAME,
-    DJANGO_DB_USER,
-    DJANGO_DB_PASSWORD
-)
+from settlemant_class import SalaryData, AttData
 
 
 def dictfetchall(cursor) -> List[dict]:
@@ -153,65 +142,3 @@ def get_additional_override(salary_data: List[SalaryData]) -> dict:
         if data.m_position!='INTERN' and data.w_status == '출금완료' and 'HA' in data.frid]
     
     return {'AM0001': sum(HA_team_withdrawal_data) * 0.05}
-
-
-
-if __name__ == '__main__':    
-
-    with psycopg2.connect(
-        host=HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD) as conn:
-
-        cursor = conn.cursor()
-
-        cursor.execute(get_attandance_sql('2022-04-01'))
-        settlement_att_data = dictfetchall(cursor)
-
-        cursor.execute(get_attandance_sql('2022-04-10'))
-        firstday_att_data = dictfetchall(cursor)
-
-        cursor.execute(get_salary_data_sql('2022-04'))
-        salary_data_list = dictfetchall(cursor)
-
-        cursor.execute(get_training_fee_sql(2022, 3))
-        training_fee_list = dictfetchall(cursor)
-
-
-    settlement_att = [AttData(**item) for item in settlement_att_data]
-    firstday_att = [AttData(**item) for item in firstday_att_data]
-    salary_data = [SalaryData(**item) for item in salary_data_list]
-
-
-    override_members = get_override_members(settlement_att, firstday_att)
-    override_dict = get_override_dict(override_members, salary_data, '2022-04')
-
-    MemberSalary.override_members = override_dict
-
-    training_fee_members = set([data['frid'] for data in training_fee_list])
-    salary_members = set([data.frid for data in salary_data])
-    firstday_members = set([data.frid for data in firstday_att])
-
-    # print(training_fee_members)
-    # print(salary_members)
-    # print(firstday_members)
-
-    report_members = list(training_fee_members.union(salary_members, firstday_members))
-    report_members.sort()
-
-    print(report_members)
-
-    am0001 = MemberSalary(
-        frid='AM0001',
-        frname='조성재',
-        m_position_1st='SD',
-        m_position_settlement='SD',
-        override_rate=0.2,
-        signup_list=[data for data in salary_data if data.frid=='AM0001'],
-        team_signup_list=[data for data in salary_data if 'AM0001' in data.treecode],
-        training_fee=0,
-        unsettled_salary=0
-    )
-
-    print(am0001.get_full_override())
-    print(am0001.get_down_override())
-    print(am0001.get_final_override())
-    print(get_additional_override(salary_data))
