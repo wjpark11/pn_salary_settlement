@@ -43,7 +43,13 @@ WHERE adate='{datestr}';"""
     return att_sql
 
 
-def get_training_fee_sql(year: int, month: int) -> str:
+def get_training_fee_sql(settlement_yearmonth: str) -> str:
+    [year, month] = [int(item) for item in settlement_yearmonth.split('-')]
+    if month == 1:
+        year, month = year - 1, 12
+    else:
+        year, month = year, month - 1
+
     training_fee_sql = f"""SELECT 
     frid,
     frname,

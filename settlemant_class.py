@@ -60,6 +60,7 @@ class MemberSalary:
     team_signup_list: List[SalaryData]
     training_fee: int
     unsettled_salary: int
+    additional_override: int
 
 
     def get_settlement_signups(self) -> tuple:
@@ -75,6 +76,8 @@ class MemberSalary:
         return settlement_signups, salary_by_withdrawal
 
     def get_full_override(self) -> int:
+        if self.frid not in self.override_members.keys():
+            return 0
         team_salary = 0
         for signup in self.team_signup_list:
             if signup.w_status == '출금완료' and signup.m_position != 'INTERN':
@@ -83,15 +86,19 @@ class MemberSalary:
     
     def get_down_override(self) -> dict:
         down_override = dict()
+        if self.frid not in self.override_members.keys():
+            return down_override
         for signup in self.team_signup_list:
             temp = signup.get_down_override(self.frid, self.override_members)
             down_override = dict(Counter(down_override)+Counter(temp))
         return down_override
 
     def get_final_override(self) -> int:
+        if self.frid not in self.override_members.keys():
+            return 0
         total_override = self.get_full_override()
         total_down_override = sum(self.get_down_override().values())
-        return total_override - total_down_override
+        return total_override - total_down_override + self.additional_override
 
     def get_signup_salary(self) -> int:
         signup_salary = 0
