@@ -35,7 +35,9 @@ class SalaryData:
         submember_list = tree_list[frid_index+1:]
         for member in submember_list:
             if member in override_members.keys():
-                return {member: self.monthlycommission * override_members[member]}
+                return {
+                    member: self.monthlycommission * override_members[member]
+                    }
         
         return dict()
 
@@ -61,13 +63,15 @@ class SalaryData:
         )
 
 
-
 @dataclass
 class AttData:
     frid: str
     frname: str
     m_position: str
     flid: str
+
+    def info_tuple(self) -> tuple:
+        return (self.flid, self.frid, self.frname, self.m_position)
 
 
 @dataclass
@@ -151,9 +155,12 @@ class MemberSalary:
         
         return signup_salary
 
-    def info_tuple(self):
-        settlement_amount = self.get_signup_salary()+self.get_final_override()+self.training_fee+self.unsettled_salary
-        tax = int(int(max(0,settlement_amount)*0.03)/10)*10 + int(int(max(0,settlement_amount)*0.003)/10)*10
+    def info_tuple(self) -> tuple:
+        settlement_amount =\
+            self.get_signup_salary()+self.get_final_override()\
+            + self.training_fee+self.unsettled_salary
+        tax = int(int(max(0,settlement_amount)*0.03)/10)*10\
+            + int(int(max(0,settlement_amount)*0.003)/10)*10
         info = (
             self.frid,
             self.frname,
@@ -170,9 +177,3 @@ class MemberSalary:
             max(0, settlement_amount) - tax
         )
         return info
-
-    
-
-
-
-

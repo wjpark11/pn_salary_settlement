@@ -98,8 +98,7 @@ unsettled_dict = {u['frid']:u['salary'] for u in unsettled_salary_list}
 additional_override_dict = get_additional_override(salary_data)
 salary_list = []
 
-for frid in report_members:    
-    
+for frid in report_members:
     member_salary_data = MemberSalary(
         frid = frid,
         frname = member_name_dict[frid],
@@ -117,12 +116,30 @@ for frid in report_members:
 
 # fill data to xlsm template
 wb = xw.Book(XLSM_TEMPLATE)
+setting_sheet = wb.sheets['setting']
 member_info_sheet = wb.sheets['members']
 unsettled_salary_sheet = wb.sheets['unsettled']
 training_fee_sheet = wb.sheets['training_fee']
 main_data_sheet = wb.sheets['data']
 override_sheet = wb.sheets['override']
 total_sheet = wb.sheets['종합']
+
+# fill setting_sheet
+[year, month] = [int(item) for item in settlement_yearmonth.split('-')]
+setting_sheet.range('B1').value = year
+setting_sheet.range('D1').value = month
+setting_sheet.range('A3').value = f'정산시점: {settlement_date}'
+setting_sheet.range('H3').value = f'1일 시점: {settlement_yearmonth+"-01"}'
+
+settlement_att_sheet_data = []
+firstday_att_sheet_data = []
+for att_data in settlement_att:
+    settlement_att_sheet_data.append(att_data.info_tuple())
+for att_data in firstday_att:
+    firstday_att_sheet_data.append(att_data.info_tuple())
+
+setting_sheet.range('A5').value = settlement_att_sheet_data
+setting_sheet.range('H5').value = firstday_att_sheet_data
 
 # fill member_info_sheet
 member_info_sheet_data = []
@@ -173,7 +190,8 @@ for data in salary_data:
 main_data_sheet.range('A2').value = main_data_list
 
 # fill override sheet
-override_membersalary_list = filter(lambda x: x.frid in override_dict.keys(), salary_list)
+override_membersalary_list =\
+    filter(lambda x: x.frid in override_dict.keys(), salary_list)
 override_sheet_data = []
 override_sheet_down_data = []
 for override_membersalary in override_membersalary_list:
@@ -213,6 +231,6 @@ total_sheet.range('A5').value = data_list
    
 
 
-wb.save("test.xlsm")
+wb.save(f"급여정산({settlement_yearmonth}).xlsm")
 
 

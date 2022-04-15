@@ -1,2 +1,5 @@
 __pycache__/
 db_cred.py
+*.xlsm
+*.xlsx
+*.xls
