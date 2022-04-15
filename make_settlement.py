@@ -1,5 +1,7 @@
 import re
+
 import psycopg2
+import xlwings as xw
 
 from settlemant_class import SalaryData, AttData, MemberSalary
 from utils import (
@@ -41,10 +43,10 @@ with psycopg2.connect(
     cursor = conn.cursor()
 
     cursor.execute(get_attandance_sql(settlement_yearmonth+'-01'))
-    settlement_att_data = dictfetchall(cursor)
+    firstday_att_data = dictfetchall(cursor)
 
     cursor.execute(get_attandance_sql(settlement_date))
-    firstday_att_data = dictfetchall(cursor)
+    settlement_att_data = dictfetchall(cursor)
 
     cursor.execute(get_salary_data_sql(settlement_yearmonth))
     salary_data_list = dictfetchall(cursor)
@@ -113,5 +115,104 @@ for frid in report_members:
     salary_list.append(member_salary_data)
 
 
+# fill data to xlsm template
+wb = xw.Book(XLSM_TEMPLATE)
+member_info_sheet = wb.sheets['members']
+unsettled_salary_sheet = wb.sheets['unsettled']
+training_fee_sheet = wb.sheets['training_fee']
+main_data_sheet = wb.sheets['data']
+override_sheet = wb.sheets['override']
+total_sheet = wb.sheets['종합']
+
+# fill member_info_sheet
+member_info_sheet_data = []
+for member_info in member_info_list:    
+    info = (
+        member_info['member_id'],
+        member_info['id_num'],
+        member_info['name'],
+        member_info['bank_id'],
+        member_info['bank_name'],
+        member_info['account_number'],
+        member_info['account_name'],
+        member_info['email']
+    )
+    member_info_sheet_data.append(info)
+member_info_sheet.range('A2').value = member_info_sheet_data
+
+# fill unsettled_salary_sheet
+unsettled_salary_sheet_data = []
+for unsettled_salary in unsettled_salary_list:
+    unsettled_info = (
+        unsettled_salary['frid'],
+        '',
+        unsettled_salary['salary'],
+        unsettled_salary['memo']
+    )
+    unsettled_salary_sheet_data.append(unsettled_info)
+unsettled_salary_sheet.range('A2').value = unsettled_salary_sheet_data
+
+
+# fill training_fee_sheet
+training_fee_sheet_data = []
+for training_fee in training_fee_list:
+    fee_info = (
+        training_fee['frid'],
+        training_fee['frname'],
+        training_fee['days'],
+        training_fee['fee']
+    )
+    training_fee_sheet_data.append(fee_info)
+training_fee_sheet.range('A2').value = training_fee_sheet_data
+
+
+main_data_list = []
+for data in salary_data:
+    main_data_list.append(data.info_tuple())
+
+main_data_sheet.range('A2').value = main_data_list
+
+# fill override sheet
+override_membersalary_list = filter(lambda x: x.frid in override_dict.keys(), salary_list)
+override_sheet_data = []
+override_sheet_down_data = []
+for override_membersalary in override_membersalary_list:
+    override_sheet_data.append(
+        (override_membersalary.frid,
+        override_membersalary.frname,
+        override_membersalary.m_position_settlement,
+        override_membersalary.get_team_salary(),
+        override_membersalary.get_team_submit_amount(settlement_yearmonth),
+        override_membersalary.override_rate,
+        override_membersalary.get_full_override(),
+        override_membersalary.get_final_override())
+    )
+    if override_membersalary.get_down_override():
+        for k, v in override_membersalary.get_down_override().items():
+            override_sheet_down_data.append(
+                (override_membersalary.frid, k, v)
+            )
+# # temp!
+override_sheet_down_data.append(
+    ('AM0001', 'HA0001', get_additional_override(salary_data)['AM0001'] * -1)
+)
+
+override_sheet.range('A2').value = override_sheet_data
+override_sheet.range('K2').value = override_sheet_down_data
+
+
+
+# fill 종합 sheet
+data_list =[]
 for data in salary_list:
-    print(data)
+    data_list.append(data.info_tuple())
+
+total_sheet.range('A5').value = data_list
+
+
+   
+
+
+wb.save("test.xlsm")
+
+

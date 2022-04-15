@@ -39,6 +39,28 @@ class SalaryData:
         
         return dict()
 
+    def info_tuple(self) -> tuple:
+        return (
+            self.signupdate.strftime("%Y-%m-%d"),
+            self.pnserial,
+            self.site,
+            self.applytime.strftime("%H:%M"),
+            self.charity,
+            self.ahage,
+            self.submitstatus,
+            self.submitamount,
+            self.w_status,
+            self.withdrawamount,
+            self.monthlycommission,
+            self.m_position,
+            self.frid,
+            self.frname,
+            self.treecode,
+            self.salarymonth,
+            self.rate
+        )
+
+
 
 @dataclass
 class AttData:
@@ -65,24 +87,45 @@ class MemberSalary:
 
     def get_settlement_signups(self) -> tuple:
         '''
-        returns tuple (settlement_signups, salary_by_withdrawal)
+        returns tuple (settlement_signups, amount_by_withdrawal)
         '''
         settlement_signups = 0
-        salary_by_withdrawal = 0
+        amount_by_withdrawal = 0
         for signup in self.signup_list:
             if signup.w_status == '출금완료':
                 settlement_signups += 1
-                salary_by_withdrawal += signup.monthlycommission
-        return settlement_signups, salary_by_withdrawal
+                amount_by_withdrawal += signup.submitamount
+        return settlement_signups, amount_by_withdrawal
 
-    def get_full_override(self) -> int:
-        if self.frid not in self.override_members.keys():
-            return 0
+    def get_team_salary(self) -> int:
         team_salary = 0
         for signup in self.team_signup_list:
             if signup.w_status == '출금완료' and signup.m_position != 'INTERN':
                 team_salary += signup.monthlycommission
+        return team_salary
+
+    def get_full_override(self) -> int:
+        if self.frid not in self.override_members.keys():
+            return 0
+        team_salary = self.get_team_salary()
         return team_salary * self.override_rate
+
+    def get_team_submit_amount(self, settlement_yearmonth: str) -> int:
+        [year, month] = [int(item) for item in settlement_yearmonth.split('-')]
+        if month == 1:
+            year, month = year - 1, 12
+        else:
+            year, month = year, month - 1
+
+        last_month_team_submitamount = 0
+
+        for data in self.team_signup_list:
+            if data.submitstatus =='정기후원'\
+                and data.signupdate.year == year\
+                and data.signupdate.month == month\
+                and data.m_position != 'INTERN':                
+                last_month_team_submitamount += data.submitamount
+        return last_month_team_submitamount
     
     def get_down_override(self) -> dict:
         down_override = dict()
@@ -107,6 +150,26 @@ class MemberSalary:
                 signup_salary += signup.monthlycommission
         
         return signup_salary
+
+    def info_tuple(self):
+        settlement_amount = self.get_signup_salary()+self.get_final_override()+self.training_fee+self.unsettled_salary
+        tax = int(int(max(0,settlement_amount)*0.03)/10)*10 + int(int(max(0,settlement_amount)*0.003)/10)*10
+        info = (
+            self.frid,
+            self.frname,
+            self.m_position_settlement,
+            *self.get_settlement_signups(),
+            self.get_signup_salary(),
+            self.get_final_override(),
+            self.training_fee,
+            self.unsettled_salary,
+            0,
+            settlement_amount,
+            max(0, settlement_amount),
+            tax,
+            max(0, settlement_amount) - tax
+        )
+        return info
 
     
 

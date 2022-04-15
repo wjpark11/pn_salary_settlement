@@ -18,7 +18,7 @@ def get_salary_data_sql(settlement_yearmonth: str) -> str:
 
 
 def get_unsettled_salary_sql(settlement_yearmonth: str) -> str:
-    unsettled_salary_sql = f"""SELECT frid, salary
+    unsettled_salary_sql = f"""SELECT frid, salary, memo
 FROM unsettled_salary
 WHERE is_settled = TRUE AND settled_yearmonth='{settlement_yearmonth}'
     """
@@ -134,6 +134,7 @@ def get_override_dict(
     return override_dict
 
 
+# temporary function before new override system
 def get_additional_override(salary_data: List[SalaryData]) -> dict:
     HA_team_withdrawal_data = [
         data.monthlycommission
